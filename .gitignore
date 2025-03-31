@@ -1,0 +1,19 @@
+# card_details.pdf
+
+
+ 
+# card_details.json
+
+
+# Ignore environment variable file
+.env
+
+# Ignore database credentials
+db_creds.yaml
+
+# Ignore all config files
+config/
+
+# Ignore all log files
+*.log
+
