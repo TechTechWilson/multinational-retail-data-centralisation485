@@ -1,68 +1,86 @@
+print("database_utils.py loaded")
+
 import yaml
-import psycopy2
-import sqlalchemy 
-from sqlalchemy import create_engine, inspect 
+import pandas as pd
+from sqlalchemy import create_engine, inspect
+
 
 class DatabaseConnector:
-    def __init__(self, yaml_file = 'db_creds.yaml'):
+    def __init__(self, yaml_file):
         self.yaml_file = yaml_file
-
+        self.engine = None
 
     def read_db_creds(self):
+        """
+        Reads YAML file with database credentials.
+        
+        """
         try:
             with open(self.yaml_file, 'r') as file:
-                credentials = yaml.safe_load(file)
-            return credentials
-        except FileNotFoundError:
-            print("Error: Credentials not found.")
-        return None
-    
-    
-def init_db_engine(self):
-    
-    db_creds = self.read_db_creds()
-    if db_creds is not None:
-
-        self.adapter = 'psycopy2'
-        self.database_type = 'postgresql'
-        self.password = db_creds['RDS_PASSWORD']
-        self.host = db_creds['RDS_NAME']
-        self.user = db_creds['RDS_USER']
-        self.database = db_creds['RDS_DATABASE']
-        self.port = db_creds['RDS_PORT']
-
-        engine_url= f"{self.database_type}+{self.adapter}://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
-        create = engine_engine(engine_url)
-        return engine
-    else:
-        print("Error: No valid credentials found in yaml file.")
-        return None
-
-def list_db_tables(self):
-    engine = self.init_db_engine()
-    if engine is not None:
-        try:
-            insector = inspect(engine)
-            return insector.get_table_names()
+                creds = yaml.safe_load(file)
+            return creds
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error reading YAML: {e}")
             return None
 
-def upload_to_db(self, df, table_name):
+    def init_db_engine(self):
         """
+        Initialises a SQLAlchemy engine based on the YAML credentials.
+
+        """
+        creds = self.read_db_creds()
+        if creds:
+            db_url = f"postgresql+psycopg2://{creds['RDS_USER']}:{creds['RDS_PASSWORD']}@{creds['RDS_HOST']}:{creds['RDS_PORT']}/{creds['RDS_DATABASE']}"
+            try:
+                self.engine = create_engine(db_url)
+                return self.engine
+            except Exception as e:
+                print(f"Failed to create engine: {e}")
+                return None
+
+    def list_db_tables(self):
+        """
+        Lists all tables in the connected database.
+        
+        """
+        if self.engine is None:
+            self.init_db_engine()
+
+        if self.engine is not None:
+            try:
+                inspector = inspect(self.engine)
+                return inspector.get_table_names()
+            except Exception as e:
+                print(f"Error inspecting database: {e}")
+                return None
+
+    def upload_to_db(self, df, table_name):
+        """
+        
         Uploads a DataFrame to the database.
+        
         """
+        if self.engine is None:
+         self.init_db_engine()
+         
+        if self.engine is not None:
+            self.init_db_engine()
+
         try:
-            df.to_sql(table_name, self.db_engine, if_exists='replace', index=False)
+            df.to_sql(table_name, self.engine, if_exists='replace', index=False)
             print(f"Data successfully uploaded to {table_name}")
         except Exception as e:
             print(f"Error uploading to database: {e}")
+        else;
+            print("Database engine is not initialized. Please check your credentials.")
 
+if __name__ == "__main__":
+    connector = DatabaseConnector("db_creds.yaml")
+    engine = connector.init_db_engine()
+    tables = connector.list_db_tables()
 
-db_to_sql = clean_dataframe.to.sql(Table_name)
- if __name__ == "__main__":
-    pass 
-
-db_connector = DatabaseConnector()
-tables = db_connector.list_db_tables()
-print("Available tables:", {tables})
+    if engine and tables:
+        print("Connected to the database!")
+        print("Tables in DB:", tables)
+    else:
+        print("Could not connect to the database.")

@@ -1,60 +1,52 @@
-import boto3
+import os
 from io import StringIO
+import boto3
 import pandas as pd
 import requests
-import tabula  
-import os
+from loguru import logger 
 from dotenv import load_dotenv
-from sqlalchemy import inspect
-from database_utils import DatabaseConnector
-
-load_dotenv()
 
 class DataExtractor:
-    def __init__(self):
+    def __init__(self, db_connector, yaml_file=None):
+        load_dotenv()  #
 
+        self.db_connector = db_connector
         self.api_key = os.getenv("API_KEY")
         self.num_stores_url = os.getenv("NUM_STORES_URL")
         self.store_url = os.getenv("STORE_DETAILS_URL")
         self.s3_bucket = os.getenv("S3_BUCKET_NAME")
         self.s3_object_key = os.getenv("S3_OBJECT_KEY")
         self.headers = {"x-api-key": self.api_key}
-        self.db_connector = DatabaseConnector()
-
-    def retrieve_pdf_data(self, pdf_url):
-        pdf_dataframes = tabula.read_pdf(pdf_url, pages="all", multiple_tables=True)
-        return pd.concat(pdf_dataframes, ignore_index=True)
-    
-    def read_rds_table(self, table_name: str):
-        try:        
-            engine = self.db_connector.init_db_engine()
-            inspector = inspect(engine)
-            tables = inspector.get_table_names()
-
-            if table_name not in tables:
-                return pd.DataFrame()
-            
-            query = f"SELECT * FROM {table_name}"
-            return pd.read_sql(query, engine)
-        except Exception as e:
-            print(f"Error reading table {table_name}: {e}")
-            return pd.DataFrame()
 
     def list_number_of_stores(self):
-        response = requests.get(self.num_stores_url, headers=self.headers)
-        if response.status_code == 200:
+        try:
+            response = requests.get(self.num_stores_url, headers=self.headers)
+            response.raise_for_status()
             data = response.json()
-            return data.get("number_of_stores", 0)
-        else:
-            raise Exception(f"Failed to retrieve number of stores. Status code: {response.status_code}, {response.text}")
-    
+            return data.get("number_stores")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get number of stores: {e}")
+            raise
+
+    def retrieve_store_data(self, store_number):
+        """Fetch details for a specific store using its number."""
+        url = f"{self.store_url}{store_number}"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    def retrieve_all_stores_data(self, total_stores):
+        """Loop through store numbers to extract each store’s data."""
+        all_stores = []
+        for store_num in range(total_stores):
+            store_data = self.retrieve_store_data(store_num)
+            all_stores.append(store_data)
+        return pd.DataFrame(all_stores)
+
     def extract_from_s3(self):
-        s3_client = boto3.client('s3') 
-        response = s3_client.get_object(Bucket=self.s3_bucket, Key=self.s3_object_key)
-        data = response['Body'].read().decode('utf-8')
+        """Pulls a CSV file from S3 and returns it as a pandas DataFrame."""
+        s3 = boto3.client("s3")
+        response = s3.get_object(Bucket=self.s3_bucket, Key=self.s3_object_key)
+        data = response["Body"].read().decode("utf-8")
         df = pd.read_csv(StringIO(data))
         return df
-
-if __name__ == "__main__":
-    extractor = DataExtractor()
-    print("Environment variables loaded successfully.")
