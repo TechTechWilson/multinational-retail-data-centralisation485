@@ -3,14 +3,14 @@ from io import StringIO
 import boto3
 import pandas as pd
 import requests
-from loguru import logger 
+import logging
+
+logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
 
 class DataExtractor:
-    def __init__(self, db_connector, yaml_file=None):
-        load_dotenv()  #
-
-        self.db_connector = db_connector
+    def __init__(self):
+        load_dotenv()
         self.api_key = os.getenv("API_KEY")
         self.num_stores_url = os.getenv("NUM_STORES_URL")
         self.store_url = os.getenv("STORE_DETAILS_URL")
