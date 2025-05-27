@@ -4,6 +4,7 @@ import boto3
 import pandas as pd
 import requests
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
@@ -36,17 +37,46 @@ class DataExtractor:
         return response.json()
 
     def retrieve_all_stores_data(self, total_stores):
-        """Loop through store numbers to extract each store’s data."""
+        """Loop through store numbers to extract each store's data."""
         all_stores = []
         for store_num in range(total_stores):
             store_data = self.retrieve_store_data(store_num)
             all_stores.append(store_data)
         return pd.DataFrame(all_stores)
 
-    def extract_from_s3(self):
-        """Pulls a CSV file from S3 and returns it as a pandas DataFrame."""
-        s3 = boto3.client("s3")
-        response = s3.get_object(Bucket=self.s3_bucket, Key=self.s3_object_key)
-        data = response["Body"].read().decode("utf-8")
-        df = pd.read_csv(StringIO(data))
-        return df
+    def extract_from_s3(self, s3_path):
+        try:
+            s3 = boto3.client("s3")
+            bucket, key = s3_path.replace("s3://", "").split("/", 1)
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            data = obj["Body"].read().decode("utf-8")
+            return pd.read_csv(StringIO(data))
+        except Exception as e:
+            logger.error(f"Error extracting from S3 {s3_path}: {e}")
+            return pd.DataFrame()
+
+    def extract_json_from_s3(self, json_file_name: str) -> pd.DataFrame:
+        """
+        Extracts JSON data from an S3 bucket and converts it to a pandas DataFrame.
+        
+        Args:
+            json_file_name (str): The name of the JSON file in the S3 bucket
+            
+        Returns:
+            pd.DataFrame: The extracted data as a pandas DataFrame
+            
+        Raises:
+            Exception: If there's an error accessing the S3 bucket or processing the JSON data
+        """
+        try:
+            s3 = boto3.client("s3")
+            bucket = "data-handling-public"
+            obj = s3.get_object(Bucket=bucket, Key=json_file_name)
+            data = obj["Body"].read().decode("utf-8")
+            json_data = json.loads(data)
+            return pd.DataFrame(json_data)
+        except Exception as e:
+            logger.error(f"Error extracting JSON from S3 {json_file_name}: {e}")
+            return pd.DataFrame()
+
+
