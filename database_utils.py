@@ -111,6 +111,17 @@ class DatabaseConnector:
         else:
             logger.error("Database engine is not initialised. Please check your credentials.")
 
+    def print_max_lengths(df, columns):
+        for col in columns:
+            if col in df.columns:
+                print(f"{col}: {df[col].astype(str).map(len).max()}")
+
+    def execute_sql(self, sql):
+        if self.engine is None:
+            self.init_db_engine()
+        with self.engine.connect() as conn:
+            conn.execute(sql)
+
 if __name__ == "__main__":
     # Connects to a PostgreSQL database using credentials from a YAML file,
     # lists all tables in the database (raw), and prints them.

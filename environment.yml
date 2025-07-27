@@ -1,0 +1,15 @@
+name: multinatdata
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas=2.2.3
+  - numpy=1.26.4
+  - sqlalchemy=2.0.30
+  - pyyaml=6.0.1
+  - boto3=1.37.1
+  - requests=2.31.0
+  - python-dotenv=1.0.1
+  - pip
+  - pip:
+      - psycopg2-binary==2.9.10 

@@ -1,5 +1,5 @@
-# card_details.pdf
-
+#  MRDC raw .tar 
+mrdc_raw_data_db.tar 
 
  
 # card_details.json
@@ -9,7 +9,9 @@
 .env
 
 # Ignore database credentials
-db_creds.yaml
+db_creds_raw.yaml
+
+db_creds_cleaned.yaml 
 
 # Ignore all config files
 config/

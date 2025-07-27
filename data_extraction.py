@@ -70,7 +70,7 @@ class DataExtractor:
         """
         try:
             s3 = boto3.client("s3")
-            bucket = "data-handling-public"
+            bucket = "public-data-handling-bucket"
             obj = s3.get_object(Bucket=bucket, Key=json_file_name)
             data = obj["Body"].read().decode("utf-8")
             json_data = json.loads(data)
