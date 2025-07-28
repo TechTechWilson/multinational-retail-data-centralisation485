@@ -86,19 +86,23 @@ class DataCleaning:
 
         weight_str = str(weight).lower().strip()
 
-        if 'kg' in weight_str:
-            return float(weight_str.replace('kg', '').strip())
-        if 'g' in weight_str:
-            return float(weight_str.replace('g', '').strip()) / 1000
-        if 'ml' in weight_str:
-            return float(weight_str.replace('ml', '').strip()) / 1000
-        if 'oz' in weight_str:
-            return float(weight_str.replace('oz', '').strip()) * 0.0283495
+        match = re.match(r'(\d+)\s*x\s*(\d+)', weight_str)
+        if match:
+            count, unit_weight = map(float, match.groups())
+            weight_str = str(count * unit_weight)
 
-        numeric = ''.join([c for c in weight_str if c.isdigit() or c == '.'])
         try:
+            if 'kg' in weight_str:
+                return float(weight_str.replace('kg', '').strip())
+            if 'g' in weight_str:
+                return float(weight_str.replace('g', '').strip()) / 1000
+            if 'ml' in weight_str:
+                return float(weight_str.replace('ml', '').strip()) / 1000
+            if 'oz' in weight_str:
+                return float(weight_str.replace('oz', '').strip()) * 0.0283495
+            numeric = ''.join([c for c in weight_str if c.isdigit() or c == '.'])
             return float(numeric) / 1000
-        except ValueError:
+        except Exception:
             return None
 
     def convert_product_weights(self, df: pd.DataFrame) -> pd.DataFrame:

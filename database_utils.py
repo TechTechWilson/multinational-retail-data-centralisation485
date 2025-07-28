@@ -2,38 +2,57 @@ import yaml
 import pandas as pd
 from sqlalchemy import create_engine, inspect
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DatabaseConnector:
-    def __init__(self, yaml_file, reinit=False):
+    def __init__(self, yaml_file_or_mode="db_creds_cleaned.yaml", reinit=False):
         """
-        Initialises the DatabaseConnector with a path to the YAML credentials file.
+        Initialises the DatabaseConnector with a path to the YAML credentials file or production mode.
         """
-        self.yaml_file = yaml_file
+        self.yaml_file_or_mode = yaml_file_or_mode
         self.engine = None
         if reinit:
             self.init_db_engine()
 
     def read_db_creds(self):
         """
-        Reads YAML file with database credentials.
+        Reads YAML file with database credentials or uses environment variables in production.
         
         Returns:
             dict: Database credentials.
         """
-        try:
-            with open(self.yaml_file, 'r') as file:
-                creds = yaml.safe_load(file)
+        if self.yaml_file_or_mode == "production":
+            # Use environment variables for production (Render)
+            creds = {
+                'RDS_USER': os.getenv('DATABASE_USER', os.getenv('PGUSER')),
+                'RDS_PASSWORD': os.getenv('DATABASE_PASSWORD', os.getenv('PGPASSWORD')),
+                'RDS_HOST': os.getenv('DATABASE_HOST', os.getenv('PGHOST')),
+                'RDS_PORT': os.getenv('DATABASE_PORT', os.getenv('PGPORT', '5432')),
+                'RDS_DATABASE': os.getenv('DATABASE_NAME', os.getenv('PGDATABASE'))
+            }
+            
+            # Check if all required credentials are present
             required_keys = ['RDS_USER', 'RDS_PASSWORD', 'RDS_HOST', 'RDS_PORT', 'RDS_DATABASE']
             for key in required_keys:
-                if key not in creds:
-                    raise ValueError(f"Missing {key} in credentials file.")
+                if not creds[key]:
+                    raise ValueError(f"Missing {key} in environment variables.")
             return creds
-        except Exception as e:
-            logger.error(f"Error reading YAML: {e}")
-            return None
+        else:
+            # Use YAML file for local development
+            try:
+                with open(self.yaml_file_or_mode, 'r') as file:
+                    creds = yaml.safe_load(file)
+                required_keys = ['RDS_USER', 'RDS_PASSWORD', 'RDS_HOST', 'RDS_PORT', 'RDS_DATABASE']
+                for key in required_keys:
+                    if key not in creds:
+                        raise ValueError(f"Missing {key} in credentials file.")
+                return creds
+            except Exception as e:
+                logger.error(f"Error reading YAML: {e}")
+                return None
 
     def init_db_engine(self):
         """

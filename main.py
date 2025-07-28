@@ -15,7 +15,7 @@ def run_pipeline():
     # Products (S3)
     try:
         logging.info("Starting product data extraction.")
-        product_df = extractor.extract_from_s3("s3://public-data-handling-bucket/products.csv")
+        product_df = extractor.extract_from_s3("s3://data-handling-public/products.csv")
         cleaned_product_df = cleaner.clean_products_data(product_df)
         if cleaned_product_df.empty:
             logging.warning("Cleaned products DataFrame is empty. Skipping upload.")
